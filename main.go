@@ -37,16 +37,21 @@ func createDatabase(db *sql.DB) error {
 
 	return nil
 }
+
 func main() {
 
-	appPath, err := os.Executable()
-	if err != nil {
-		log.Fatal(err)
+	dbFile := os.Getenv("TODO_DBFILE")
+
+	if dbFile == "" {
+		appPath, err := os.Executable()
+		if err != nil {
+			log.Fatal(err)
+		}
+		dbFile = filepath.Join(filepath.Dir(appPath), "scheduler.db")
+
 	}
 
-	dbFile := filepath.Join(filepath.Dir(appPath), "scheduler.db")
-
-	_, err = os.Stat(dbFile)
+	_, err := os.Stat(dbFile)
 	var install bool
 
 	if os.IsNotExist(err) {
