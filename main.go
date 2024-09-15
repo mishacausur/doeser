@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -221,6 +222,31 @@ func lastDayOfMonth(year int, month time.Month) int {
 	return lastDay.Day()
 }
 
+func createTask(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var task Task
+	err := json.NewDecoder(r.Body).Decode(&task)
+	if err != nil {
+		http.Error(w, "Ошибка декодирования JSON", http.StatusBadRequest)
+		return
+	}
+	if task.Title == "" {
+		http.Error(w, "Не указано название задачи", http.StatusBadRequest)
+		return
+	}
+	if _, err := time.Parse("20060102", task.Date); err != nil {
+		http.Error(w, "Некорректный формат даты", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("added", task)
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Задача успешно создана"})
+}
 func main() {
 
 	dbFile := os.Getenv("TODO_DBFILE")
