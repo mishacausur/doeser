@@ -222,6 +222,15 @@ func lastDayOfMonth(year int, month time.Month) int {
 	return lastDay.Day()
 }
 
+func createTaskInDB(db *sql.DB, task Task) error {
+	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
+	_, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
+	if err != nil {
+		return fmt.Errorf("Ошибка при добавлении задачи в базу данных: %v", err)
+	}
+	return nil
+}
+
 func createTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
