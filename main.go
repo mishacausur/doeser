@@ -18,8 +18,8 @@ import (
 type Task struct {
 	Date    string `json:"date"`
 	Title   string `json:"title"`
-	Comment string `json:"comment, omitempty"`
-	Repeat  string `json:"repeat, omitempty"`
+	Comment string `json:"comment,omitempty"`
+	Repeat  string `json:"repeat,omitempty"`
 }
 
 func createDatabase(db *sql.DB) error {
@@ -35,7 +35,7 @@ func createDatabase(db *sql.DB) error {
 
 	_, err := db.Exec(createTableSQL)
 	if err != nil {
-		return fmt.Errorf("Ошибка создания таблицы: %v", err)
+		return fmt.Errorf("ошибка создания таблицы: %v", err)
 	}
 
 	createIndexSQL := `
