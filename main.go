@@ -18,8 +18,13 @@ import (
 type Task struct {
 	Date    string `json:"date"`
 	Title   string `json:"title"`
-	Comment string `json:"comment, omitempty"`
-	Repeat  string `json:"repeat, omitempty"`
+	Comment string `json:"comment,omitempty"`
+	Repeat  string `json:"repeat,omitempty"`
+}
+
+type Response struct {
+	ID    string `json:"id,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 func createDatabase(db *sql.DB) error {
@@ -222,16 +227,22 @@ func lastDayOfMonth(year int, month time.Month) int {
 	return lastDay.Day()
 }
 
-func createTaskInDB(db *sql.DB, task Task) error {
+func createTaskInDB(db *sql.DB, task Task) (string, error) {
 	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
-	_, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
+	result, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
 	if err != nil {
-		return fmt.Errorf("Ошибка при добавлении задачи в базу данных: %v", err)
+		return "", fmt.Errorf("Ошибка при добавлении задачи в базу данных: %v", err)
 	}
-	return nil
+	id, err := result.LastInsertId()
+	if err != nil {
+		return "", fmt.Errorf("Ошибка при получении ID задачи: %v", err)
+	}
+
+	fmt.Printf("Создана задача с ID: %d\n", id)
+	return fmt.Sprintf("%d", id), nil
 }
 
-func createTask(w http.ResponseWriter, r *http.Request) {
+func createTask(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
@@ -247,14 +258,32 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Не указано название задачи", http.StatusBadRequest)
 		return
 	}
-	if _, err := time.Parse("20060102", task.Date); err != nil {
-		http.Error(w, "Некорректный формат даты", http.StatusBadRequest)
+	now := time.Now().Format("20060102")
+
+	if task.Date == "" {
+		task.Date = now
+	} else {
+		parsedDate, err := time.Parse("20060102", task.Date)
+		if err != nil {
+			http.Error(w, "Некорректный формат даты", http.StatusBadRequest)
+			return
+		}
+
+		if parsedDate.Format("20060102") < now {
+			if strings.TrimSpace(task.Repeat) == "" {
+				task.Date = now
+			}
+		}
+	}
+	id, err := createTaskInDB(db, task)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Error: err.Error()})
 		return
 	}
-	fmt.Println("added", task)
 	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Задача успешно создана"})
+	json.NewEncoder(w).Encode(Response{ID: id})
 }
 func main() {
 
@@ -298,9 +327,11 @@ func main() {
 	indexPage := http.FileServer(http.Dir("./web"))
 
 	http.Handle("/", indexPage)
-	http.HandleFunc("/api/task", createTask)
+	http.HandleFunc("/api/task", func(w http.ResponseWriter, r *http.Request) {
+		createTask(w, r, db)
+	})
 
-	error := http.ListenAndServe(":"+port, nil)
+	error := http.ListenAndServe(":"+"7540", nil)
 
 	if error != nil {
 		panic(error)
