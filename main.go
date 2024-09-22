@@ -22,11 +22,6 @@ type Task struct {
 	Repeat  string `db:"repeat" json:"repeat,omitempty"`
 }
 
-type Response struct {
-	ID    string `json:"id,omitempty"`
-	Error string `json:"error,omitempty"`
-}
-
 func createTask(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
@@ -64,14 +59,12 @@ func createTask(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Error: err.Error()})
+		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
-
-	fmt.Println(id, task.Title, task.Repeat, task.Date)
-	fmt.Println()
+	fmt.Println(id)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(Response{ID: id})
+	json.NewEncoder(w).Encode(id)
 }
 func main() {
 	dbFile := os.Getenv("TODO_DBFILE")
@@ -117,6 +110,7 @@ func main() {
 	http.HandleFunc("/api/task", func(w http.ResponseWriter, r *http.Request) {
 		createTask(w, r, db)
 	})
+	http.HandleFunc("/api/nextdate", nextDateHandler)
 
 	error := http.ListenAndServe(":"+port, nil)
 
