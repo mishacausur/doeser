@@ -31,11 +31,11 @@ func createTask(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var task Task
 	err := json.NewDecoder(r.Body).Decode(&task)
 	if err != nil {
-		http.Error(w, "Ошибка декодирования JSON", http.StatusBadRequest)
+		http.Error(w, "Decoding JSON Error", http.StatusBadRequest)
 		return
 	}
 	if strings.TrimSpace(task.Title) == "" {
-		http.Error(w, "Не указано название задачи", http.StatusBadRequest)
+		http.Error(w, "Task name cannot be empty", http.StatusBadRequest)
 		return
 	}
 	now := time.Now().Format("20060102")
